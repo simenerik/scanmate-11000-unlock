@@ -1,0 +1,53 @@
+ScanMate 11000 — quick install
+==============================
+
+0. BACK UP
+   Dump both EPROMs (P6310/IC10, P6314/IC14) with a programmer. Three reads each.
+   Copy your existing CQscan.exe somewhere safe.
+
+1. SCSI ADAPTER
+
+   Adaptec aic78xx:
+
+     reg add "HKLM\SYSTEM\CurrentControlSet\Services\aic78xx\Parameters\Device" ^
+       /v MaximumSGList /t REG_DWORD /d 65 /f
+
+     Reboot. 65 entries = 266,240 bytes; the SPTD buffer needs 229,452 across at
+     most 58 entries, so this covers the full 35,492 px ceiling with margin.
+
+   Any other card: run tools/Get-ScsiPortCaps.ps1 elevated. It reports whether your
+   adapter covers the full ceiling, and by how much it falls short if not.
+
+2. COLORQUARTET   (close ColorQuartet first)
+
+   python tools\patch-cqscan.py "C:\Program Files (x86)\Esko-Graphics\ColorQuartet Pro 5.2\CQscan.exe"
+
+   It backs up to CQscan.exe.original, applies everything in one pass,
+   verifies each step, and refuses to run twice.
+
+   The patcher verifies every step and reports the resulting hash.
+
+3. FIRMWARE
+
+   CQscan -> firmware update -> firmware/SCA04000_pool6800.A6
+   Wait for it to finish. Power cycle.
+   The service console (9600 baud, thumbwheel 8) should print:  A8FF
+
+4. CALIBRATE
+   Every flash resets NVRAM to factory defaults.
+   Run a white calibration: preview, crop ~20 x 20 mm on a clear area of the drum,
+   then Calibrate. About 3 minutes.
+
+5. TEST
+   Scan 5,000 px 8-bit, a few hundred lines. Console should report several buffers
+   and "All lines transferred". Check the image.
+
+   Then go wide: 30,000 px at 16-bit. Console should report 2 buffers.
+   Two is the minimum — if it ever says 1, power cycle rather than let it hang.
+
+ROLLBACK
+   Firmware: flash firmware/SCA04000_pool.A6   (27,300 px, marker A5FF)
+   Host:     restore CQscan.exe.original
+
+REQUIREMENTS
+   Python 3 for patch-cqscan.py and bigtiff.py. No libraries needed.
