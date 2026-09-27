@@ -11,7 +11,6 @@ software. This fixes all of it. No hardware changes.
 |---|---|---|
 | Widest line, 16-bit RGB | 10,922 px | 35,492 px |
 | Widest line, 8-bit | 21,845 px | 70,991 px |
-| Buffer pool used | 31 % | 81 % |
 | File size limit | 2 GB in practice | none, writes BigTIFF |
 
 Every 120 format now reaches 11,000 dpi, which is the optical limit of the machine. 4x5
