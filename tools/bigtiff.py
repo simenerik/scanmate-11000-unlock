@@ -525,15 +525,18 @@ def _report(path, H, n):
 def cmd_verify(a):
     for p in a.inputs:
         i = read_bigtiff(p)
+        # bytes per pixel comes from the file's own tags, so 8-bit and greyscale
+        # scans verify as well as 16-bit RGB
+        bpp = sum(i['bits']) // 8
         declared = sum(i['strip_counts'])
-        expect = i['width'] * i['height'] * BYTES_PER_PX
+        expect = i['width'] * i['height'] * bpp
         last = max(o + c for o, c in zip(i['strip_offsets'], i['strip_counts']))
         checks = [
             ('magic 43 / offset size 8', True),
             ('IFD within file', i['ifd_offset'] < i['size']),
             ('strip data within file', last <= i['size']),
             ('pixel bytes match dimensions', declared == expect),
-            ('16 bits x 3 samples', i['bits'] == [16, 16, 16] and i['spp'] == 3),
+            ('sample depth self-consistent', bpp > 0 and len(i['bits']) == i['spp']),
             ('strips non-overlapping and ascending',
              all(i['strip_offsets'][k] + i['strip_counts'][k] <= i['strip_offsets'][k + 1]
                  for k in range(len(i['strip_offsets']) - 1))),
@@ -541,10 +544,11 @@ def cmd_verify(a):
              len(i['strip_offsets']) ==
              -(-i['height'] // i['rows_per_strip'])),
             ('all strips but the last are exactly rows_per_strip rows',
-             all(c == i['rows_per_strip'] * i['width'] * BYTES_PER_PX
+             all(c == i['rows_per_strip'] * i['width'] * bpp
                  for c in i['strip_counts'][:-1])),
         ]
-        print(f'{p}: {i["width"]:,} x {i["height"]:,}, {i["size"]:,} bytes')
+        print(f'{p}: {i["width"]:,} x {i["height"]:,}, {i["spp"]}x{i["bits"][0]}-bit, '
+              f'{i["size"]:,} bytes')
         good = True
         for name, c in checks:
             good &= c

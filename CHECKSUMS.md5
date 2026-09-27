@@ -1,0 +1,14 @@
+2aae5b2eab8f0c6744dc692a3d58c6ca  INSTALL.txt
+c2c01f5bf07e62ca25dc20ff7352d82c  LICENSE
+9035b6b8cdf1a6c6c65ddb056b920fc3  README.md
+aff8c4464988510f4652db20b17372af  docs/BigTIFF-Patch-Method.md
+c9ba474b18f6c582b94ecf5ed2ba9155  firmware/SCA04000_owntest.A6
+6d9789a545b9778be2e6d727d14cbfb4  firmware/SCA04000_pool.A6
+07bebb0991f7b156f874bc3542a5b8eb  firmware/SCA04000_pool6800.A6
+881ac453efea3c2833acc8760e457e44  tools/Check-CQscanLimits.ps1
+15230bf3f7fc902e1b12196e4632ab10  tools/Get-ScsiPortCaps.ps1
+887299cfb87b1f9f716d2388b28f2d43  tools/Test-SeekLimit.ps1
+29a8b1b88fda6098fa67b7cce7cd35de  tools/bigtiff.py
+ec43de181becd7738fb68dd7082b742b  tools/fwpatch.py
+0441c835b2fcacf27cb1a80c8aa75c4b  tools/ground.py
+9d2a122cfed51df184a10859462626f2  tools/patch-cqscan.py

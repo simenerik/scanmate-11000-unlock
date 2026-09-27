@@ -418,5 +418,8 @@ work, and coordination beats duplication.
 - **Silent failure is the enemy.** Two of five failures produced no crash, no error, and a
   plausible-looking file.
 - **A 50 MB test exercises the same path as a 5 GB one.** Iterate in minutes.
-- **Say what you have not verified.** The 64-bit carry path has still never executed —
-  every scan so far keeps the IFD offset under 2³². Stated, not buried.
+- **Say what you have not verified.** The 64-bit carry path has still never executed on
+  hardware — every scan so far keeps the IFD offset under 2³². It has since been exercised
+  by emulating the patched routines against a mock libtiff, including a 5 GiB case where
+  the directory offset and every strip offset carry past 2³² correctly. Emulation is not a
+  scan. Stated, not buried.

@@ -4,9 +4,9 @@ patch-cqscan.py - apply the ScanMate 11000 host patches to your own CQscan.exe
 
 Applies, in one pass:
   * LARGE_ADDRESS_AWARE                      0x00116
-  * chunk budget / transfer guard / SPTD     0x339C0, 0x60FE8, 0x61A11   (coupled)
+  * chunk budget / transfer guard / buffer   0x339C0, 0x60FE8, 0x61A11   (coupled)
   * .text marked writable                    PE section flag
-  * BigTIFF writer                           ~820 bytes into .text slack, 4 hooks
+  * BigTIFF writer                           1,110 bytes into .text slack, 4 hooks
 
 Works on a stock CQscan.exe or one that already has the three constants applied.
 Never distributes ColorQuartet itself - it patches the copy you already own.

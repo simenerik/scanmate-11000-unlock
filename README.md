@@ -1,242 +1,185 @@
-# ScanMate 11000 — full unlock
+# ScanMate 11000 unlock
 
-Firmware and host patches for the **ScanView ScanMate 11000** drum scanner. Raises the
-16-bit line ceiling from the factory **10,922 px** to **35,492 px**, and removes the file
-size limit entirely by making ColorQuartet write BigTIFF.
+Firmware and host patches for the ScanView ScanMate 11000 drum scanner.
 
-All on completely unmodified hardware. The limits were never optical or mechanical — they
-were 16-bit variables in firmware written in 1995, a DRAM pool using a third of the RAM
-already fitted, and matching bottlenecks in the host software.
+The scanner could never scan a line wider than 10,922 pixels in 16-bit RGB. That limit was
+not the optics or the mechanics. It was 16-bit variables in firmware from 1995, a buffer
+pool using a third of the RAM already fitted, and the same kind of limits in the host
+software. This fixes all of it. No hardware changes.
 
-| | Factory | This release |
+| | Factory | With this |
 |---|---|---|
-| Max line, 16-bit RGB | 10,922 px | **35,492 px** |
-| Max line, 8-bit RGB | 21,845 px | **70,991 px** |
-| DRAM pool in use | 31 % | **81 %** |
-| Max file size | 4 GiB (2 GiB in practice) | **BigTIFF, no practical limit** |
-| 35 mm / 645 / 6×6 / 6×7 / 6×9, 16-bit | 4,953–11,000 dpi | **11,000 dpi — the optical limit** |
-| 4×5, 16-bit | 2,920 dpi | **9,489 dpi** |
-| 5×7, 16-bit | 2,311 dpi | **7,512 dpi** |
-| 8×10, 16-bit | 1,429 dpi | **4,646 dpi** |
-| 8×10, 8-bit | 1,429 dpi | **9,294 dpi** |
+| Widest line, 16-bit RGB | 10,922 px | 35,492 px |
+| Widest line, 8-bit | 21,845 px | 70,991 px |
+| Buffer pool used | 31 % | 81 % |
+| File size limit | 2 GB in practice | none, writes BigTIFF |
 
-Every figure verified on hardware. The final wide test ran **29,763 px × 333 lines** to
-completion — a scan that on the previous firmware would have allocated a single buffer and
-hung the SCSI bus.
+Every 120 format now reaches 11,000 dpi, which is the optical limit of the machine. 4x5
+reaches 9,489 dpi, 8x10 reaches 4,646 dpi in 16-bit and 9,294 in 8-bit.
 
----
+## What you need
 
-## ⚠ Before you flash anything
+- A ScanMate 11000 running firmware 10.04. The service console prints
+  `Prom version is 10.04` at boot. Another version needs another build.
+- ColorQuartet Pro 5.2 with CQscan.exe, 2,211,840 bytes.
+- Python 3, for the patcher. It only edits the file, so you can run it on any PC and copy
+  the patched CQscan.exe over afterwards.
 
-**Dump your own EPROMs first.** Two flash chips, P6310 (IC10) and P6314 (IC14), Intel
-N28F001BX-T120, PLCC32, socketed. Read each three times with a programmer such as an XGecu
-T48 and confirm the reads match. This is your recovery path. Do not skip it.
+You do not need an EPROM programmer. The chips stay in the machine.
 
-**This firmware is built on version 10.04** (`SCA04000.A6`, 229,376 bytes). The service
-console prints `Prom version is 10.04` at boot. A different revision needs a different
-build.
+## Before you start
 
-**Every flash resets NVRAM calibration** to factory defaults. Capture the console's `*`
-output before and after, and plan a white calibration afterwards.
+Copy CQscan.exe somewhere safe, and save a `*` dump from the service console so your
+calibration is written down.
 
-**For hardware you own.** No ColorQuartet binary, installer or licence material is
-redistributed here. `tools/patch-cqscan.py` modifies the copy you already have.
+You cannot brick the scanner by flashing. The boot block is locked in hardware and never
+written, it checks the image before programming it, and it has its own SCSI service and
+download code, so even a main block that got corrupted halfway through should still accept
+a new download. Nobody has had to find out. A flash takes about 30 seconds and the chips
+are rated for 100,000 cycles.
 
----
+If you do own a programmer, reading both chips first is cheap insurance, and it is the only
+way to build an image for a scanner on a firmware revision other than 10.04.
 
-## Contents
+## Install
 
-```
-firmware/   SCA04000_pool6800.A6    the release firmware      marker A8FF
-            SCA04000_pool.A6        previous, 27,300 px       marker A5FF   (rollback)
-            SCA04000_owntest.A6     RAM ownership test        marker A7FF
-tools/      patch-cqscan.py         applies every host patch to YOUR CQscan.exe
-tools/      bigtiff.py              BigTIFF converter, verifier and 1:1 crop tool
-            Check-CQscanLimits.ps1  reads the host constants
-            Get-ScsiPortCaps.ps1    does your SCSI adapter need tuning?
-            Test-SeekLimit.ps1      demonstrates the 2 GiB seek fault in one second
-            fwpatch.py, ground.py   ROM checksum and segment arithmetic
-docs/       BigTIFF-Patch-Method.md how the BigTIFF work was done, for reuse elsewhere
-```
+Short version in `INSTALL.txt`.
 
-MD5 sums are in `CHECKSUMS.md5` in each folder.
+1. Check the SCSI card. Run `tools\Get-ScsiPortCaps.ps1` in an elevated PowerShell. It
+   prints what your card can actually do and says whether anything needs changing. Old
+   Adaptecs on the aic78xx driver need one registry value, `MaximumSGList = 65`. Most
+   later cards need nothing. Do not set the value blindly, it can also lower what you
+   already have.
+2. Patch CQscan with `tools\patch-cqscan.py`. It writes `CQscan.exe.original` first, so
+   you can always undo it.
+3. Flash `firmware\SCA04000_pool6800.A6` from CQscan's firmware update. The console prints
+   `A8FF` at boot when it is running. Stock prints `00FF`.
+4. Run a white calibration. See below.
+5. Test narrow first, then wide.
 
----
+## A flash wipes the gain tables
 
-## Installing
+After every flash, all six R/G/B Gain and PMTGain tables read back as the factory
+defaults stored in the flash itself. I checked this by reading the defaults out of the
+EPROM image and comparing them against a console dump taken after a flash. All ten
+apertures matched exactly.
 
-### 1. Firmware — over SCSI, no chips removed
+Index offset, spindle offset, focus status and the barcode tables survive a flash. That is
+why it can look like nothing happened if you only check those. Save a `*` dump before and
+after, and plan a white calibration.
 
-ColorQuartet contains an undocumented firmware downloader. It takes a file of exactly
-229,376 bytes and sends it as seven 32 KB blocks. **The boot block is hardware-locked and
-never written, so a bad image cannot brick the scanner.** About 30 seconds; the flash is
-rated for 100,000 cycles.
+## Big files
 
-CQscan → firmware update → select `firmware/SCA04000_pool6800.A6`.
+Under 2 GB you get a normal TIFF, same as before, and ColorQuartet can still read it.
+At 2 GB and above the patch writes BigTIFF instead. There is no size limit after that.
 
-The console prints **`A8FF`** at boot when the release firmware is running (stock prints
-`00FF`).
+ColorQuartet cannot read BigTIFF, so after a very large scan it may say "Cannot open the
+TIFF file". The file is fine. Open it in Photoshop or GIMP.
 
-### 2. SCSI adapter
-
-The Adaptec `aic78xx` miniport defaults to a 17-entry scatter/gather list, capping every
-transfer at 64 KB:
+`tools\bigtiff.py` checks and converts these files, and can pull a 1:1 crop so you can
+judge focus without downscaling:
 
 ```
-HKLM\SYSTEM\CurrentControlSet\Services\aic78xx\Parameters\Device
-    MaximumSGList = 65    (DWORD)
-```
-
-**65 is the value to use, and it is sufficient with margin.** The host constants make
-ColorQuartet allocate a 229,452-byte SPTD buffer (`0x3804C`), which in the worst case of
-page misalignment spans **58** scatter/gather entries. 65 entries covers that with 7 to
-spare, and 266,240 bytes against a 212,952-byte maximum line at 35,492 px.
-
-If you raise the CQscan constants beyond `0x38000`, recompute: entries needed is
-`ceil(buffer / 4096) + 1`.
-
-**A different card? That key does nothing** — it belongs to that driver. Most later cards
-already allow far more. Run `tools/Get-ScsiPortCaps.ps1` elevated to find out.
-
-### 3. ColorQuartet
-
-Run the patcher against your own installation. It backs up to `CQscan.exe.original`,
-applies everything in one pass, verifies each step, and refuses to run twice:
-
-```
-python tools/patch-cqscan.py "C:\Program Files (x86)\Esko-Graphics\ColorQuartet Pro 5.2\CQscan.exe"
-```
-
-No ColorQuartet binary is distributed here. The changes it makes are:
-
-| Offset | Field | From | To |
-|---|---|---|---|
-| `0x00116` | PE Characteristics | `0x010F` | `0x012F` (LARGE_ADDRESS_AWARE) |
-| `0x339C0` | chunk budget | `0x0000F100` | `0x00038000` |
-| `0x60FE8` | transfer guard | `0x0000FFFF` | `0x00038000` |
-| `0x61A11` | SPTD buffer size | `0x0002004C` | `0x0003804C` |
-
-> **⚠ Those last three must change together.** Raising the transfer guard without
-> enlarging the SPTD buffer causes heap corruption that surfaces much later as an
-> unrelated crash. The buffer must always equal the guard plus `0x4C`.
-
-Plus the BigTIFF patch: `.text` marked writable, four hooks, and about 1,110 bytes of code
-and data in section slack. See `docs/BigTIFF-Patch-Method.md`.
-
-`tools/Check-CQscanLimits.ps1` reads the current values back.
-
----
-
-## How BigTIFF behaves
-
-Classic TIFF stores offsets in 32 bits, and libtiff 3.x cannot seek past 2 GiB to write
-its directory. So:
-
-- **Files under 2 GiB** are written as ordinary classic TIFF. Previews and normal work
-  stay fully compatible, and ColorQuartet can read its own output.
-- **Files at or above 2 GiB** are written as BigTIFF by the patch, which never seeks past
-  the header. No practical size limit.
-
-ColorQuartet cannot *read* BigTIFF, so it may report "Cannot open the TIFF file" after a
-very large scan. The file is fine; open it in Photoshop or GIMP.
-
-`tools/bigtiff.py` (Python 3, no dependencies) converts, verifies, and pulls 1:1 crops:
-
-```
+python bigtiff.py verify  scan.tif
 python bigtiff.py info    scan.tif --width <px>
 python bigtiff.py convert scan.tif -o out.tif --width <px> --dpi <dpi>
-python bigtiff.py verify  out.tif
 python bigtiff.py crop    scan.tif --width <px> -o check.png --size 900x900 --at X,Y
 ```
 
-It also recovers any scan ColorQuartet fails to finalise — the pixels always reach the
-disk even when the directory does not. Use `crop` to judge focus; downscaling hides
-softness.
+It also rescues a scan that ColorQuartet failed to finish writing. The pixels always reach
+the disk even when the directory does not.
 
----
+## Limits
 
-## What was wrong
+- 35,492 pixels is the ceiling. Do not go past it. Above that only one line buffer fits,
+  and with one buffer the scanner stops mid scan and hangs the SCSI bus with no timeout.
+  Power cycle to recover. Nothing is damaged.
+- The console should always report 2 buffers or more. If it ever says 1, power cycle.
+- Going higher would need the RAM at 0x80000 and up, which has never been tested and may
+  not even be there. The real-mode ceiling is 57,338 pixels in any case, because ROM
+  starts at 0xC0000.
+- Mount film with the short side around the drum. Only that direction is limited.
+- Take the thumbwheel out of service position for real scans. The console output doubles
+  the scan time at wide widths, 553 ms per line against 293.
 
-Nine independent obstacles, found and cleared one at a time:
+## Files
 
-| # | Layer | Was | Fix |
-|---|---|---|---|
-| 1 | `aic78xx` scatter/gather list | 65,536 B | registry |
-| 2 | CQscan chunk budget | 61,696 B | `0x339C0` |
-| 3 | CQscan transfer guard | 65,535 B | `0x60FE8` |
-| 4 | CQscan SPTD buffer | 131,148 B | `0x61A11` |
-| 5 | DMA byte count written 16-bit | 65,536 B | firmware |
-| 6 | SCSI line count `es:[0x8e2]` 16-bit | 65,535 B | firmware |
-| 7 | DRAM allocator fed 16-bit byte counts | 65,535 B | firmware |
-| 8 | SCSI drain capped per call | 65,535 B | firmware, chunked |
-| 9 | DRAM pool sized at 160 KB | — | firmware constant |
+```
+firmware/  SCA04000_pool6800.A6   the one to use, 35,492 px, marker A8FF
+           SCA04000_pool.A6       older, 27,300 px, marker A5FF, for rollback
+           SCA04000_owntest.A6    RAM test build, marker A7FF
+tools/     patch-cqscan.py        patches your own CQscan.exe
+           bigtiff.py             check, convert and crop big files
+           Get-ScsiPortCaps.ps1   what your SCSI card can actually do
+           Check-CQscanLimits.ps1 reads the patched values back
+           Test-SeekLimit.ps1     shows the 2 GB seek bug in one second
+           fwpatch.py             ROM checksums
+           ground.py              segment to file offset, with anchor checks
+docs/      BigTIFF-Patch-Method.md  how the BigTIFF patch was done
+```
 
-Plus the file-size work: a seek with a NULL high dword that fails above 2 GiB, and two
-layers of discarded error returns above it.
+MD5 sums for everything are in `CHECKSUMS.md5`. Both ROM checksums in all three firmware
+files are correct, and the three files are byte for byte what was flashed and tested.
 
-### The one that nearly ended it
+No ColorQuartet files are included here. The patcher edits the copy you already own, and
+writes `CQscan.exe.original` first so you can undo it.
 
-The image DMA looked like it might belong to the CPLDs, whose security fuses prevent
-readout — which would have meant hardware modification or nothing.
+## What is tested and what is not
 
-It turned out to be the **i386EX's own integrated DMA controller**. Its byte count
-register `DMA1BYC2` (expanded address `F099H`) is **24 bits**, and ScanView had already
-enabled full 24-bit decrementing via `DMAOVFE = 0Fh` — then wrote zero to the top byte.
-The hardware had been configured for it since 1995.
+Tested on hardware:
 
----
+- 29,763 px at 16-bit, 333 lines, start to finish, 178,578 bytes per line, on 2 buffers.
+  On the old firmware that width would have hung.
+- BigTIFF output written by the patch and opened.
+- Everything narrower, many times.
 
-## Limits that remain
+Not tested on hardware:
 
-**35,492 px is the ceiling for this configuration.** Beyond it, the pool would need the
-256 KB at 0x80000–0xBFFFF, which has never been probed and may not be decoded. The
-absolute real-mode maximum is 57,338 px, since the i386EX cannot address past 0xC0000
-where ROM begins.
+- Anything above 4 GB. The 64-bit part of the patch has only been run in emulation, where
+  it is correct. Treat your first scan over 4 GB as a test and run `bigtiff.py verify`.
+- Lines above 178,578 bytes, up to the 212,952 the ceiling allows. The SCSI card covers it
+  on paper.
+- `Get-ScsiPortCaps.ps1` has never been run on a real machine.
+- One scanner, one firmware version, one SCSI card.
 
-**Single buffering hangs the SCSI bus.** Any width where only one buffer fits will stall
-with no timeout; recovery is a power cycle. This release keeps two buffers to 35,492 px at
-16-bit. Do not exceed it.
+## What was actually wrong
 
-**Service-mode console output roughly doubles wide-scan time.** The firmware spins on the
-UART's `TEMT` bit for every byte at 9600 baud, and at wide widths the per-chunk messages
-are not amortised. Measured on a 19,036 × 23,852 scan: **553 ms/line with the console, 293
-without** — about 100 minutes on that scan. Take the thumbwheel out of service position
-for production work.
+Nine separate limits, each one hiding the next:
 
-**Mount film with the short side around the drum.** Only that axis is limited; carriage
-travel is free.
+| | Where | Was |
+|---|---|---|
+| 1 | aic78xx scatter/gather list | 64 KB per command |
+| 2 | CQscan chunk budget | 61,696 B |
+| 3 | CQscan transfer guard | 65,535 B |
+| 4 | CQscan pass-through buffer | 131,148 B |
+| 5 | DMA byte count, written as 16-bit | 65,536 B |
+| 6 | SCSI line count in firmware, 16-bit | 65,535 B |
+| 7 | Buffer allocator fed 16-bit byte counts | 65,535 B |
+| 8 | SCSI drain, per call | 65,535 B |
+| 9 | Buffer pool | 160 KB |
 
----
+Numbers 2 to 4 in CQscan must always be changed together, and the pass-through buffer must
+be the transfer guard plus 0x4C. Raising one without the other corrupts the heap and
+crashes later somewhere unrelated.
 
-## Method
+The DMA was the part I expected to be a dead end, because it looked like it belonged to the
+CPLDs and those cannot be read out. It turned out to be the i386EX's own DMA controller.
+Its byte counter is 24 bits wide and ScanView had already switched on all 24 bits. The
+firmware then wrote zero into the top byte. The hardware had been ready for this since
+1995.
 
-Every address derived in code from a verified anchor, never typed. Every edit guarded
-against its expected original bytes. Every result disassembled back out before flashing.
-One stage per flash, with a regression scan at a width where the change should be
-invisible.
+## Thanks
 
-Sixteen confident conclusions turned out to be wrong across this work. Every one was
-caught by a test designed to fail visibly, not by more analysis — including a BigTIFF
-writer that stored variables in a read-only section, and another whose writes all failed
-silently because a file handle was derived from a guessed structure offset.
+Bjarne, who wrote this firmware at ScanView, for answering questions about decisions he
+made thirty years ago. He remembered "a smart FIFO in memory with a write pointer and a
+read pointer", which is exactly where the real limit was.
 
----
-
-## Credits
-
-**Bjarne**, the original ScanView developer who wrote this firmware, for answering
-questions about decisions made thirty years ago. His recollection of "a smart FIFO in
-memory with a write pointer and a read pointer" pointed straight at the buffer pool.
-
-**Karl Hudson** (Hudson Grafik) and **Philipp Wagner** (Zoom and Enhance) for keeping
-these machines alive.
-
----
+Karl Hudson at Hudson Grafik and Philipp Wagner at Zoom and Enhance, for keeping these
+machines running.
 
 ## Licence
 
-Tools and documentation: MIT. The firmware images are derived from ScanView /
-Purup-Eskofot code and are provided for use with hardware you own.
+Tools and documentation are MIT. The firmware images come from ScanView / Purup-Eskofot
+code and are for use with hardware you own.
 
-Provided as-is, no warranty. You are modifying firmware in a thirty-year-old machine.
-Dump your EPROMs first.
+No warranty. You are changing firmware in a thirty year old machine.

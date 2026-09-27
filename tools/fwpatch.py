@@ -46,6 +46,7 @@ Usage
 
 import argparse
 import hashlib
+import os
 import sys
 
 MAIN_SIZE      = 0x38000
@@ -196,6 +197,10 @@ PATCHES = {
 # ------------------------------------------------------------------- pipeline
 
 def load(path):
+    if not os.path.exists(path):
+        sys.exit(f'ERROR: cannot find {path}\n'
+                 'Pass the path to your own stock SCA04000.A6 (229,376 bytes).\n'
+                 'No ROM image is distributed with these tools.')
     d = open(path, 'rb').read()
     if len(d) != MAIN_SIZE:
         sys.exit(f'ERROR: {path} is {len(d)} bytes, expected {MAIN_SIZE} '
