@@ -1,3 +1,4 @@
+Download via newest release! :)
 # ScanMate 11000 unlock
 
 Firmware and host patches for the ScanView ScanMate 11000 drum scanner.
