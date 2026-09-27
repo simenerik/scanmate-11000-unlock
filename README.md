@@ -21,8 +21,9 @@ reaches 9,489 dpi, 8x10 reaches 4,646 dpi in 16-bit and 9,294 in 8-bit.
 - A ScanMate 11000 running firmware 10.04. The service console prints
   `Prom version is 10.04` at boot. Another version needs another build.
 - ColorQuartet Pro 5.2 with CQscan.exe, 2,211,840 bytes.
-- Python 3, for the patcher. It only edits the file, so you can run it on any PC and copy
-  the patched CQscan.exe over afterwards.
+- Python 3.7 or newer, for the patcher. It only edits the file, so you can run it on any
+  PC and copy the patched CQscan.exe over afterwards. Windows 7 can run up to Python 3.8.
+  Windows XP cannot run 3.7, so patch on another machine.
 
 You do not need an EPROM programmer. The chips stay in the machine.
 
@@ -73,7 +74,9 @@ Under 2 GB you get a normal TIFF, same as before, and ColorQuartet can still rea
 At 2 GB and above the patch writes BigTIFF instead. There is no size limit after that.
 
 ColorQuartet cannot read BigTIFF, so after a very large scan it may say "Cannot open the
-TIFF file". The file is fine. Open it in Photoshop or GIMP.
+TIFF file". The file is fine. Open it in Photoshop or GIMP. Windows Photos cannot open it.
+
+Save big scans to an NTFS or exFAT drive. FAT32 cannot hold a file over 4 GB.
 
 `tools\bigtiff.py` checks and converts these files, and can pull a 1:1 crop so you can
 judge focus without downscaling:
@@ -110,22 +113,36 @@ firmware/  SCA04000_pool6800.A6   the one to use, 35,492 px, marker A8FF
 tools/     patch-cqscan.py        patches your own CQscan.exe
            bigtiff.py             check, convert and crop big files
            Get-ScsiPortCaps.ps1   what your SCSI card can actually do
-           Check-CQscanLimits.ps1 reads the patched values back
-           Test-SeekLimit.ps1     shows the 2 GB seek bug in one second
+           Test-SeekLimit.ps1     shows the 2 GB seek bug, needs PowerShell 5
            fwpatch.py             ROM checksums
            ground.py              segment to file offset, with anchor checks
 docs/      BigTIFF-Patch-Method.md  how the BigTIFF patch was done
 ```
 
-MD5 sums for everything are in `CHECKSUMS.md5`. Both ROM checksums in all three firmware
+MD5 sums for everything are in `CHECKSUMS.md5`. On Windows, check a file with
+`certutil -hashfile <file> MD5`. Both ROM checksums in all three firmware
 files are correct, and the three files are byte for byte what was flashed and tested.
 
 No ColorQuartet files are included here. The patcher edits the copy you already own, and
 writes `CQscan.exe.original` first so you can undo it.
 
+## What is tested and what is not
+
+Tested on hardware:
+
+- 29,763 px at 16-bit, 333 lines, start to finish, 178,578 bytes per line, on 2 buffers.
+  On the old firmware that width would have hung.
+- BigTIFF output written by the patch and opened.
+- Everything narrower, many times.
+
 Not tested on hardware:
 
-- One scanner, one firmware version, one SCSI card. So please reach out and inform on which new pairings work/ dont.
+- Anything above 4 GB. The 64-bit part of the patch has only been run in emulation, where
+  it is correct. Treat your first scan over 4 GB as a test and run `bigtiff.py verify`.
+- Lines above 178,578 bytes, up to the 212,952 the ceiling allows. The SCSI card covers it
+  on paper.
+- `Get-ScsiPortCaps.ps1` has never been run on a real machine.
+- One scanner, one firmware version, one SCSI card.
 
 ## What was actually wrong
 
@@ -158,6 +175,9 @@ firmware then wrote zero into the top byte. The hardware had been ready for this
 Bjarne, who wrote this firmware at ScanView, for answering questions about decisions he
 made thirty years ago. He remembered "a smart FIFO in memory with a write pointer and a
 read pointer", which is exactly where the real limit was.
+
+Karl Hudson at Hudson Grafik and Philipp Wagner at Zoom and Enhance, for keeping these
+machines running.
 
 ## Licence
 

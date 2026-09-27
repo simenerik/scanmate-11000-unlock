@@ -1,7 +1,8 @@
 ScanMate 11000 - quick install
 ==============================
 
-Needs: Python 3 (no libraries). Full detail in README.md.
+Needs: Python 3.7 or newer (no libraries). Full detail in README.md.
+Unzip everything to a folder first, for example C:\scanmate.
 
 
 0. BACK UP
@@ -13,31 +14,44 @@ Needs: Python 3 (no libraries). Full detail in README.md.
 
 1. SCSI ADAPTER
 
-   Measure first, in an elevated PowerShell:
+   Open PowerShell as administrator: Start, type powershell, right-click,
+   Run as administrator. It starts in C:\Windows\System32, so go to your folder first:
 
-     .\tools\Get-ScsiPortCaps.ps1
+     cd C:\scanmate
+
+   Then run the check. The -ExecutionPolicy part is needed because Windows blocks
+   scripts by default:
+
+     powershell -ExecutionPolicy Bypass -File .\tools\Get-ScsiPortCaps.ps1
 
    If a port already reports 58 or more MaximumPhysicalPages, you need 229,452 bytes and
    it already covers that - change nothing.
 
-   If it reports fewer and the card is an Adaptec on aic78xx:
+   If it reports fewer and the card is an Adaptec on aic78xx, run this as ONE line:
 
-     reg add "HKLM\SYSTEM\CurrentControlSet\Services\aic78xx\Parameters\Device" ^
-       /v MaximumSGList /t REG_DWORD /d 65 /f
+     reg add "HKLM\SYSTEM\CurrentControlSet\Services\aic78xx\Parameters\Device" /v MaximumSGList /t REG_DWORD /d 65 /f
 
-   Reboot, then run the script again to confirm.
+   Reboot, then run the check again to confirm.
 
    This command overwrites the value, so it LOWERS it if something already set a higher
    one. Check the current value before writing, and keep the larger of the two.
    On another driver the key has no effect - find that driver's own parameter instead.
 
 
-2. COLORQUARTET   (close ColorQuartet first)
+2. COLORQUARTET
 
-   python tools\patch-cqscan.py "C:\Program Files (x86)\Esko-Graphics\ColorQuartet Pro 5.2\CQscan.exe"
+   Close ColorQuartet first. In the same administrator window:
+
+     python tools\patch-cqscan.py "C:\Program Files (x86)\Esko-Graphics\ColorQuartet Pro 5.2\CQscan.exe"
+
+   If "python" opens the Microsoft Store, use "py" instead of "python".
+   On 32-bit Windows the folder is C:\Program Files, without (x86).
 
    Backs up to CQscan.exe.original, applies everything in one pass, verifies each step,
    and refuses to run twice.
+
+   Already patched with 2.0 or 2.1? Skip this step. The patcher applies exactly the
+   same bytes in every 2.x release.
 
 
 3. FIRMWARE
@@ -45,6 +59,8 @@ Needs: Python 3 (no libraries). Full detail in README.md.
    CQscan -> firmware update -> firmware\SCA04000_pool6800.A6
    Wait for it to finish, then power cycle.
    The service console (9600 8N1, thumbwheel 8) prints:  A8FF
+
+   Already on A8FF? Skip this step. The firmware has not changed since 2.0.
 
 
 4. RECALIBRATE
@@ -62,8 +78,9 @@ Needs: Python 3 (no libraries). Full detail in README.md.
    Then wide: 30,000 px at 16-bit. The console should report 2 buffers.
    Two is the minimum. If it ever says 1, power cycle rather than let it hang.
 
-   First scan over 2 GiB: run  python tools\bigtiff.py verify <file>
-   It must say VALID. (Above 4 GiB has been tested only in emulation.)
+   First scan over 2 GB: run  python tools\bigtiff.py verify <file>
+   It must say VALID. (Above 4 GB has been tested only in emulation.)
+   Save big scans to an NTFS or exFAT drive. FAT32 cannot hold a file over 4 GB.
 
 
 ROLLBACK
