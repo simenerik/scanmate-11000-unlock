@@ -123,23 +123,9 @@ files are correct, and the three files are byte for byte what was flashed and te
 No ColorQuartet files are included here. The patcher edits the copy you already own, and
 writes `CQscan.exe.original` first so you can undo it.
 
-## What is tested and what is not
-
-Tested on hardware:
-
-- 29,763 px at 16-bit, 333 lines, start to finish, 178,578 bytes per line, on 2 buffers.
-  On the old firmware that width would have hung.
-- BigTIFF output written by the patch and opened.
-- Everything narrower, many times.
-
 Not tested on hardware:
 
-- Anything above 4 GB. The 64-bit part of the patch has only been run in emulation, where
-  it is correct. Treat your first scan over 4 GB as a test and run `bigtiff.py verify`.
-- Lines above 178,578 bytes, up to the 212,952 the ceiling allows. The SCSI card covers it
-  on paper.
-- `Get-ScsiPortCaps.ps1` has never been run on a real machine.
-- One scanner, one firmware version, one SCSI card.
+- One scanner, one firmware version, one SCSI card. So please reach out and inform on which new pairings work/ dont.
 
 ## What was actually wrong
 
@@ -172,9 +158,6 @@ firmware then wrote zero into the top byte. The hardware had been ready for this
 Bjarne, who wrote this firmware at ScanView, for answering questions about decisions he
 made thirty years ago. He remembered "a smart FIFO in memory with a write pointer and a
 read pointer", which is exactly where the real limit was.
-
-Karl Hudson at Hudson Grafik and Philipp Wagner at Zoom and Enhance, for keeping these
-machines running.
 
 ## Licence
 
