@@ -20,8 +20,8 @@ reaches 9,489 dpi, 8x10 reaches 4,646 dpi in 16-bit and 9,294 in 8-bit.
 ## What you need
 
 - A ScanMate 11000 running firmware 10.04. The service console prints
-  `Prom version is 10.04` at boot. Another version needs another build.
-- ColorQuartet Pro 5.2 with CQscan.exe, 2,211,840 bytes.
+  `Prom version is 10.04` at boot. Another version might need another build.
+- ColorQuartet Pro 5.2 with CQscan.exe.
 - Python 3.7 or newer, for the patcher. It only edits the file, so you can run it on any
   PC and copy the patched CQscan.exe over afterwards. Windows 7 can run up to Python 3.8.
   Windows XP cannot run 3.7, so patch on another machine.
